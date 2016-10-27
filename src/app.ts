@@ -16,7 +16,7 @@ import { GameHandler } from "./api/game.handler";
 var app = express();
 
 const users = new Users();
-var gameHandler = new GameHandler();
+const gameHandler = new GameHandler();
 const router = express.Router();
 
 router.use(bodyParser.json());
@@ -32,9 +32,11 @@ router.post('/user/', users.post);
 router.get('/user/:id', users.getUser);
 router.post('/user/filter', users.filter);
 // Game
-router.get('/game/', gameHandler.get);
-router.post('/game/', gameHandler.post);
+router.get('/game', gameHandler.get);
+router.post('/game', gameHandler.createNewGame);
+router.post('/game/fake', gameHandler.createNewFakeGame);
 router.post('/game/joingame', gameHandler.joingame);
+
 
 app.use('/api', router);
 //app.use('/', express.static(__dirname + '/public'));

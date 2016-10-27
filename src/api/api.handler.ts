@@ -14,9 +14,9 @@ export class ApiHandler {
                 .json({ error: error });
         }
         if (!result) {
-            return res.
-                status(NOT_FOUND).
-                json({ error: 'Not found' });
+            return res
+                .status(NOT_FOUND)
+                .json({ error: 'Not found' });
         }
         res.status(OK).json(result);
     }

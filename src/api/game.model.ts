@@ -13,7 +13,8 @@ interface IGame {
     numPlayers: number;
     maxPlayers: number;
     state: string;
-    board: string[];
+    seed: number;
+    board: any[];
     usedWords: string[];
     players: IPlayer[];
 }
@@ -32,6 +33,7 @@ var gameSchema: mongoose.Schema = new mongoose.Schema({
     language  :  {type: String, required: true},
     numPlayers  :  {type: Number, required: true},
     maxPlayers  :  {type: Number, required: true},
+    seed  :  {type: Number, required: true},
     state  :  {type: String, required: true},
     board  :  {type: [String], required: false},
     usedWords  :  {type: [String], required: false},
