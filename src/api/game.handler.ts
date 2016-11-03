@@ -2,9 +2,10 @@ import { Request, Response, Router } from "express";
 import { Game, IGame, IPlayer, IGameModel, gameSchema } from './game.model';
 import { ApiHandler } from './api.handler';
 import { Dictionary } from './dictionary';
-import { IWord16, Word16 } from './word.model';
+import { IWord16, Word16, Word, IWord } from './word.model';
 import * as Chance from "chance";
 import * as _ from "lodash";
+import { ObjectID } from "mongodb";
 
 const MAX_SPECIAL_WORDS = 874;
 
@@ -14,34 +15,40 @@ export class GameHandler {
         GameLogic.find(res, next);
     }
 
+    public findById(req: Request, res: Response, next?: Function) {
+        let id = req.body.id;
+        GameLogic.findById(id, res, next);
+    }
+
     public createNewFakeGame(req: Request, res: Response, next?: Function) {
         GameLogic.createFakeGame(res, next);
     }
 
-    // public put(req: Request, res: Response, next?: Function) {
-    //     var user = new User(req.body);
-    //     let result = user.save();
-    //     res.send(200, result);
-    // }
-
     public createNewGame(req: Request, res: Response, next?: Function) {
         let username = req.body.username;
-        let maxPlayers = parseInt(req.body.maxplayers);
+        let maxPlayers = parseInt(req.body.maxPlayers);
         let language = req.body.language;
         GameLogic.createNewGame(username, maxPlayers, language, res, next);
     }
 
 
-    public joinNewGame(req: Request, res: Response, next?: Function) {
+    public joinGame(req: Request, res: Response, next?: Function) {
         let username = req.body.username;
-        let numPlayers = parseInt(req.body.numplayers);
         let language = req.body.language;
-        GameLogic.joingame(username.numPlayers, language, res, next);
+        GameLogic.joinGame(username, language, res, next);
     }
 
-    public joingame(req: Request, res: Response, next?: Function) {
-        GameLogic.joingame(req.body.username, req.body.language, res, next);
+
+    public addWord(req: Request, res: Response, next?: Function) {
+        GameLogic.addWord(req.body.username, req.body.gameId, req.body.word, res, next);
     }
+
+    public endGame(req: Request, res: Response, next?: Function) {
+        let username = req.body.username;
+        let gameId = req.body.gameid;
+        GameLogic.endGame(username, gameId, res, next);
+    }
+
 }
 
 
@@ -54,12 +61,19 @@ class GameLogic extends ApiHandler {
         });
     }
 
+    public static findById(id: string, res: Response, next?: Function) {
+        Game.findById({_id: id}, (err: any, games: IGame[]) => {
+            GameLogic.handleResult(res, err, games)
+        });
+    }
 
-    public static joingame(username: string, language: string, res: Response, next?: Function) {
+
+
+    public static joinGame(username: string, language: string, res: Response, next?: Function) {
         GameLogic.findCreatedAndBlock(language, (err: any, existingGame: IGameModel) => {
             if (err) next(err);
             if (existingGame === null) {
-                next(null, null);
+                GameLogic.handleResult(res, err, existingGame);
             } else {
                 let player: IPlayer = { id: existingGame.numPlayers, rounds: [], username: username };
                 existingGame.players.push(player);
@@ -76,10 +90,8 @@ class GameLogic extends ApiHandler {
         });
     }
 
-
-
     private static findCreatedAndBlock(language: string = "CA", callback: Function) {
-        var doc = new Date();
+        let doc = new Date();
         doc.setMinutes(doc.getMinutes() - 5);
         let query = { state: "CREATED", language: language, createdAt: { $gt: doc } };
         let update = { $set: { state: "BLOCKED" } };
@@ -103,7 +115,6 @@ class GameLogic extends ApiHandler {
         });
     }
 
-
     public static createFakeGame(res: Response, next?: Function) {
         var chance = new Chance();
         var game = new Game();
@@ -113,6 +124,8 @@ class GameLogic extends ApiHandler {
         game.players.push(player);
         game.createdAt = new Date();
         game.language = "CA";
+        game.seed = 12;
+        game.board = [];
         game.maxPlayers = 2;
         game.numPlayers = 1;
         game.state = "CREATED";
@@ -121,9 +134,68 @@ class GameLogic extends ApiHandler {
         });
     }
 
+    public static addWord(username: string, gameId: string, word: string, res: Response, next?: Function) {
+        let query = { word: word };
+        Word.findOne(query, (err: any, foundWord: IWord) => {
+            if (err) next(err, null);
+            if (!foundWord) {
+                // invalid word
+                GameLogic.handleResult(res, null, 0);
+            } else {
+                // valid word, check if it is already used
+                GameLogic.isWordAlreadyUsedInGame(gameId, word, (err: any, gameWithoutWord: IGame) => {
+                    if (err) next(err, null);
+                    if (!gameWithoutWord) {
+                        // game already has the word
+                        GameLogic.handleResult(res, null, 0);
+                    } else {
+                        // add word to game and player
+                        let player = _.find(gameWithoutWord.players, (player: IPlayer) => {
+                            return (player.username === username);
+                        });
+                        GameLogic.addWordToPlayer(gameId, player.id, word, (err: any, updatedGame: IGame) => {
+                            GameLogic.handleResult(res, null, 1);
+                        });
+                    }
+                });
+            }
+        });
+    }
+
+    public static endGame(username: string, gameId: string, res: Response, next?: Function) {
+        let objectId = new ObjectID(gameId);
+        let query = { _id: objectId };
+        let update = { state: "ENDED" };
+        Game.findOneAndUpdate(query, update, { 'new': true }, (err: any, game: IGame) => {
+            GameLogic.handleResult(res, err, game);
+        });
+    }
+
+
+    private static isWordAlreadyUsedInGame(gameId: string, word: string, callback?: Function) {
+        let objectId = new ObjectID(gameId);
+        let query = { _id: objectId, usedWords: { $nin: [word] } };
+        let update = { $push: { usedWords: word } };
+        Game.findOneAndUpdate(query, update, { 'new': true }, (err: any, gameWithWord: IGame) => {
+            if (err) callback(err, null);
+            callback(null, gameWithWord);
+        });
+    }
+
+    private static addWordToPlayer(gameId: string, playerId: number, word: string, callback?: Function) {
+        let objectId = new ObjectID(gameId);
+        let query = { _id: objectId };
+        let selector = {};
+        selector['players.' + playerId + '.rounds'] = word;
+        Game.update(query, { $push: selector }, (err: any, updated: IGame) => {
+            if (err) callback(err, null);
+            callback(err, updated);
+        });
+    }
+
 
     private static fetchWord16(callback?: Function) {
-        var id = Math.floor(Math.random() * MAX_SPECIAL_WORDS);
+        let id = Math.floor(Math.random() * MAX_SPECIAL_WORDS);
         Word16.findOne({ id: id }, (err: any, word: IWord16) => {
             if (err) return callback(err, null);
             callback(err, word);

@@ -14,7 +14,7 @@ import { Users } from "./api/user.handler";
 import { GameHandler } from "./api/game.handler";
 
 var app = express();
-
+const PORT: number = 6061;
 const users = new Users();
 const gameHandler = new GameHandler();
 const router = express.Router();
@@ -35,8 +35,9 @@ router.post('/user/filter', users.filter);
 router.get('/game', gameHandler.get);
 router.post('/game', gameHandler.createNewGame);
 router.post('/game/fake', gameHandler.createNewFakeGame);
-router.post('/game/joingame', gameHandler.joingame);
-
+router.post('/game/joinGame', gameHandler.joinGame);
+router.post('/game/addWord', gameHandler.addWord);
+router.post('/game/findById', gameHandler.findById);
 
 app.use('/api', router);
 //app.use('/', express.static(__dirname + '/public'));
@@ -47,7 +48,7 @@ if (env === 'development') {
     app.use(errorHandler());
 }
 
-app.listen(3000, function () {
+app.listen(PORT, function () {
 
     var dbURI = require('./env.json')[process.env.NODE_ENV || 'local']["MONGO_URI"];
     var dbOptions = {
@@ -61,7 +62,7 @@ app.listen(3000, function () {
     mongoose.connect(dbURI, dbOptions);
 
     //console.log("Demo Express server listening on port %d in %s mode", 3000, app.settings.env);
-    console.log("Letter and Words backend server listening on port %d in %s mode", 3000, process.env.NODE_ENV || 'local');
+    console.log("Letter and Words backend server listening on port %d in %s mode", PORT, process.env.NODE_ENV || 'local');
 });
 
 var App = app;

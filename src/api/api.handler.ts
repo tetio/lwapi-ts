@@ -1,24 +1,24 @@
 
 import { Response } from "express";
 
-const INTERNAL_SERVER_ERROR: number = 500;
-const NOT_FOUND: number = 404;
-const OK: number = 200;
-
 export class ApiHandler {
+    static INTERNAL_SERVER_ERROR: number = 500;
+    static NOT_FOUND: number = 404;
+    static OK: number = 200;
+
 
     protected static handleResult(res: Response, error: string, result: any | any[]) {
         if (error) {
             return res
-                .status(INTERNAL_SERVER_ERROR)
+                .status(ApiHandler.INTERNAL_SERVER_ERROR)
                 .json({ error: error });
         }
-        if (!result) {
+        if (result == null) {
             return res
-                .status(NOT_FOUND)
-                .json({ error: 'Not found' });
+                .status(ApiHandler.NOT_FOUND)
+                .json({});
         }
-        res.status(OK).json(result);
+        res.status(ApiHandler.OK).json(result);
     }
 
 }
