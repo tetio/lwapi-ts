@@ -2,6 +2,7 @@ import { Request, Response, Router } from "express";
 import { Game, IGame, IPlayer, IGameModel, gameSchema } from './game.model';
 import { ApiHandler } from './api.handler';
 import { Dictionary } from './dictionary';
+import { IGameResult } from './gameResult';
 import { IWord16, Word16, Word, IWord } from './word.model';
 import * as Chance from "chance";
 import * as _ from "lodash";
@@ -39,6 +40,8 @@ export class GameHandler {
     }
 
 
+
+
     public addWord(req: Request, res: Response, next?: Function) {
         GameLogic.addWord(req.body.username, req.body.gameId, req.body.word, res, next);
     }
@@ -47,6 +50,11 @@ export class GameHandler {
         let username = req.body.username;
         let gameId = req.body.gameid;
         GameLogic.endGame(username, gameId, res, next);
+    }
+
+    public result(req: Request, res: Response, next?: Function) {
+        let gameId = req.body.gameid;
+        GameLogic.result(gameId, res, next);
     }
 
 }
@@ -62,8 +70,8 @@ class GameLogic extends ApiHandler {
     }
 
     public static findById(id: string, res: Response, next?: Function) {
-        Game.findById({_id: id}, (err: any, games: IGame[]) => {
-            GameLogic.handleResult(res, err, games)
+        Game.findById({ _id: id }, (err: any, game: IGame) => {
+            GameLogic.handleResult(res, err, game)
         });
     }
 
@@ -170,7 +178,7 @@ class GameLogic extends ApiHandler {
             GameLogic.handleResult(res, err, game);
         });
     }
-
+    
 
     private static isWordAlreadyUsedInGame(gameId: string, word: string, callback?: Function) {
         let objectId = new ObjectID(gameId);
@@ -193,6 +201,31 @@ class GameLogic extends ApiHandler {
         });
     }
 
+    public static result(gameId: string, res: Response, next?: Function) {
+        var tmpScore = -1;
+        var winner = "";
+        Game.findById({ _id: gameId }, (err: any, game: IGame) => {
+            let result: Dictionary<number> = new Dictionary<number>();
+            let scores: number[] = [];
+            game.players.map((player: IPlayer) => {
+                let partials = player.rounds.map((word: string) => {
+                    return word.length;
+                });
+                let score = partials.reduce((a, b) => a + b);
+                scores.push(score);
+                if (tmpScore < score) {
+                    tmpScore = score;
+                    winner = player.username;
+                }
+                result[player.username] = score;
+            });
+            let auxScores = scores.filter((a) => a === scores[0]);
+            if (scores.length === auxScores.length) {
+                winner = "";
+            }
+            GameLogic.handleResult(res, err, { winner: winner, result: result })
+        });
+    }
 
     private static fetchWord16(callback?: Function) {
         let id = Math.floor(Math.random() * MAX_SPECIAL_WORDS);
@@ -201,5 +234,7 @@ class GameLogic extends ApiHandler {
             callback(err, word);
         });
     }
+
+
 }
 

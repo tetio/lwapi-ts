@@ -38,6 +38,8 @@ router.post('/game/fake', gameHandler.createNewFakeGame);
 router.post('/game/joinGame', gameHandler.joinGame);
 router.post('/game/addWord', gameHandler.addWord);
 router.post('/game/findById', gameHandler.findById);
+router.post('/game/endGame', gameHandler.endGame);
+router.post('/game/result', gameHandler.result);
 
 app.use('/api', router);
 //app.use('/', express.static(__dirname + '/public'));
