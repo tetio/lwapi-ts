@@ -2,7 +2,6 @@
 
 # Letter and Words Rest Api
 
-
 ## Database
 ### Initialization
 mongoimport -d lw -c words DISC2-LP-mongoimport.json
