@@ -18,5 +18,6 @@ internal/
 **/.vs
 **/*.map
 **/*.d.ts
+**/*.log
 
 
