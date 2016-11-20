@@ -1,4 +1,4 @@
-{
+var config = {
   "local": {
     "MONGO_URI": "mongodb://localhost:27017/lw",
     "MONGO_OPTIONS": {"db": {"safe": true}}
@@ -12,3 +12,5 @@
     "MONGO_OPTIONS": {"db": {"safe": true}}
   }
 }
+
+export { config }

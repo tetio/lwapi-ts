@@ -4,6 +4,7 @@ import * as express from "express";
 import * as logger from 'morgan';
 import * as bodyParser from "body-parser";
 import errorHandler = require("errorhandler");
+import {config} from "./config";
 
 import mongoose = require('mongoose');
 
@@ -52,7 +53,7 @@ if (env === 'development') {
 
 app.listen(PORT, function () {
 
-    var dbURI = require('./env.json')[process.env.NODE_ENV || 'local']["MONGO_URI"];
+    var dbURI = config[process.env.NODE_ENV || 'local']["MONGO_URI"];
     var dbOptions = {
         server: {
             socketOptions: {
